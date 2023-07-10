@@ -1,7 +1,7 @@
 ![Webcam Mouse Controller with Blink Detection](/screenshot_mouse_web.png?raw=true "Webcam Mouse Controller with Blink Detection")
 # Webcam Mouse Controller with Blink Detection
 
-This Python program utilizes computer vision techniques and facial landmark detection to control the mouse cursor using face movements and detect blinks for mouse clicks. By tracking the user's face through the webcam, it maps the face movements to mouse movements and interprets eye blinks as mouse clicks.
+This Python program utilizes computer vision techniques and facial landmark detection to control the mouse cursor using face movements and detect blinks for mouse clicks. By tracking the user's face through the webcam, it maps the face movements to mouse movements and interprets hand closings as mouse clicks.
 
 ## Features
 
