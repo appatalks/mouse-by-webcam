@@ -4,10 +4,47 @@ import pyautogui
 import tkinter as tk
 from tkinter import messagebox
 import random
+import mediapipe as mp
 
 # Counter variables for left and right eye blinks
 left_blink_counter = 0
 right_blink_counter = 0
+
+# Constants for mouse sensitivity
+MOUSE_SPEED = 5
+VERTICAL_SCALE = 2
+
+# Face detection and landmark detection initialization
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")  # Path to the pre-trained facial landmark model
+
+# Hand detection initialization
+hand_detector = mp.solutions.hands.Hands(
+    static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5
+)
+THRESHOLD_DISTANCE = 0.05  # Adjust this value according to your needs
+
+class Bubble:
+    def __init__(self, x, y, radius):
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.is_popped = False
+
+    def update(self):
+        self.y -= 1
+
+    def check_collision(self, cursor_x, cursor_y):
+        if not self.is_popped and distance((self.x, self.y), (cursor_x, cursor_y)) <= self.radius:
+            self.is_popped = True
+            self.increment_popped_counter()
+            return True
+        return False
+
+    def increment_popped_counter(self):
+        if self.is_popped:
+            global popped_bubble_counter
+            popped_bubble_counter += 1
 
 def calculate_ear(eye_points):
     # Calculate the eye aspect ratio (EAR)
@@ -27,39 +64,19 @@ def draw_eye_region(frame, eye_points):
     for i in range(len(eye_points)):
         cv2.line(frame, eye_points[i], eye_points[(i + 1) % len(eye_points)], (0, 255, 0), 1)
 
-class Bubble:
-    def __init__(self, x, y, radius):
-        self.x = x
-        self.y = y
-        self.radius = radius
-        self.is_popped = False
-
-    def update(self):
-        self.y -= 1
-
-    def check_collision(self, cursor_x, cursor_y):
-        if not self.is_popped and distance((self.x, self.y), (cursor_x, cursor_y)) <= self.radius:
-            self.is_popped = True
-
 # Mouse event callback function
 def mouse_callback(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         # Check for collision with bubbles
         for bubble in bubbles:
-            bubble.check_collision(x, y)
+            if bubble.check_collision(x, y):
+                global popped_bubble_counter
+                popped_bubble_counter += 1
 
 # Webcam initialization
 cap = cv2.VideoCapture(0)  # You may need to change the index (0) depending on the webcam's availability
 
-# Constants for mouse sensitivity
-MOUSE_SPEED = 5
-VERTICAL_SCALE = 2
-
-# Face detection and landmark detection initialization
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")  # Path to the pre-trained facial landmark model
-
-# Blink detection variables
+# Constants for blink detection
 EYE_AR_THRESH = 0.2  # Eye aspect ratio threshold for blink detection
 EYE_AR_CONSEC_FRAMES = 3  # Number of consecutive frames for which the eye must be below the threshold to consider it as a blink
 left_eye_counter = 0
@@ -73,10 +90,17 @@ MAX_BUBBLES = 10
 MIN_RADIUS = 10
 MAX_RADIUS = 30
 
+# Counter variable for popped bubbles
+popped_bubble_counter = 0
+
 # Create a window for the webcam
 cv2.namedWindow('Webcam')
 # Register the mouse callback function
 cv2.setMouseCallback('Webcam', mouse_callback)
+
+# Colors for visual indicators
+LEFT_CLICK_COLOR = (0, 255, 0)  # Green
+RIGHT_CLICK_COLOR = (0, 0, 255)  # Red
 
 # Main loop
 try:
@@ -184,8 +208,42 @@ try:
             cv2.putText(frame, "Right Eye Blinks: {}".format(right_blink_counter), (10, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
+        # Hand detection and mouse click functionality
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hand_detector.process(rgb_frame)
+
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                landmarks = hand_landmarks.landmark
+
+                thumb_tip = landmarks[mp.solutions.hands.HandLandmark.THUMB_TIP]
+                index_tip = landmarks[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP]
+
+                hand_distance = distance((thumb_tip.x, thumb_tip.y), (index_tip.x, index_tip.y))
+                is_hand_closed = hand_distance < THRESHOLD_DISTANCE
+
+                # Visual indicators for left click and right click
+                if is_hand_closed:
+                    if index_tip.x < thumb_tip.x:  # Left hand
+                        cv2.circle(frame, (int(thumb_tip.x * frame.shape[1]), int(thumb_tip.y * frame.shape[0])),
+                                   10, LEFT_CLICK_COLOR, -1)
+                        # Perform left click action
+                        pyautogui.click(button='left')
+                    else:  # Right hand
+                        cv2.circle(frame, (int(thumb_tip.x * frame.shape[1]), int(thumb_tip.y * frame.shape[0])),
+                                   10, RIGHT_CLICK_COLOR, -1)
+                        # Perform right click action
+                        pyautogui.click(button='left')
+
+        # Display the popped bubble count
+        cv2.putText(frame, "Popped Bubbles: {}".format(popped_bubble_counter), (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
         # Display the video feed
         cv2.imshow('Webcam', frame)
+
+        # Register the mouse callback function
+#        cv2.setMouseCallback('Webcam', mouse_callback)
 
         # Exit the loop on 'q' key press
         if cv2.waitKey(1) & 0xFF == ord('q'):
