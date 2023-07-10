@@ -5,8 +5,8 @@ This Python program utilizes computer vision techniques and facial landmark dete
 ## Features
 
 - Control the mouse cursor using face movements.
-- Detect left eye blinking ~~as a left click.~~
-- Detect right eye blinking ~~as a right click.~~
+- Detect eye blinking.
+- Detect hand closing as left click. Try to Pop the Bubbles!
 
 ## Requirements
 
@@ -35,9 +35,10 @@ This Python program utilizes computer vision techniques and facial landmark dete
 3. Facial landmarks are detected using dlib's shape predictor, specifically targeting the eye regions.
 4. Eye aspect ratio (EAR) is calculated based on the eye landmarks to detect blinks.
 5. Face movements are mapped to mouse movements by tracking the center of the face.
-6. When a left eye blink is detected, it ~~emulates a left mouse click using pyautogui.~~ counters up.
-7. When a right eye blink is detected, it ~~emulates a right mouse click using pyautogui.~~ counters up.
+6. When a left eye blink is detected, it counters up.
+7. When a right eye blink is detected, it counters up.
 8. The mouse cursor is moved based on the face movements.
+9. Use close hands to emulate mouse click.
 
 ## Limitations
 
